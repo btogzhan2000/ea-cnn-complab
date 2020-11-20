@@ -233,8 +233,15 @@ class GPUTools(object):
             if lines[line_no].startswith('|==='):
                 break
             else:
-                gpu_info_list.append(lines[line_no][1:-1].strip())
+                line = lines[line_no][1:-1].strip()
+                if "1338" in line or "1373" in line or "6230" in line or "6365" in line or "8232" in line or "31588" in line or "32456" in line:
+                    print("pass") 
+                else:
+                    gpu_info_list.append(line)
         #parse the information
+        print(gpu_info_list)
+        if len(gpu_info_list)==0:
+            gpu_info_list.append("No running processes found")
         print(gpu_info_list)
         if len(gpu_info_list) == 1:
             if gpu_info_list[0].startswith('No'): #GPU outputs: No running processes found
@@ -243,13 +250,15 @@ class GPUTools(object):
                 info_array = gpu_info_list[0].split(' ', 1)
                 if info_array[0] == '0':
                     Log.info('GPU_QUERY-GPU#1 and # are available, choose GPU#1')
-                    return 1
+                    #return 1
+                    
                 elif info_array[0] == '1':
                     Log.info('GPU_QUERY-GPU#0 and #2 is available, choose GPU#2')
-                    return 2
+                    #return 2
                 else:
                     Log.info('GPU_QUERY-GPU#0 and #1 is available, choose GPU#0')
-                    return 0
+                    #return 0
+                return 0
 
         elif len(gpu_info_list) == 2:
             info_array1 = gpu_info_list[0].split(' ', 1)
@@ -257,13 +266,14 @@ class GPUTools(object):
             gpu_use_list = [info_array1[0], info_array2[0]]
             if '0' not in gpu_use_list:
                 Log.info('GPU_QUERY-GPU#0 is available')
-                return 0
+                #return 0
             if '1' not in gpu_use_list:
                 Log.info('GPU_QUERY-GPU#1 is available')
-                return 1
+                #return 1
             if '2' not in gpu_use_list:
                 Log.info('GPU_QUERY-GPU#2 is available')
-                return 2
+                #return 2
+            return None
         else:
             Log.info('GPU_QUERY-No available GPU')
             return None
@@ -568,9 +578,3 @@ class Utils(object):
 
 if __name__ == '__main__':
     GPUTools.detect_availabel_gpu_id()
-
-
-
-
-
-

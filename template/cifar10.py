@@ -108,7 +108,6 @@ class EvoCNNModel(nn.Module):
 
     def forward(self, x):
         #generate_forward
-
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
@@ -116,8 +115,8 @@ class EvoCNNModel(nn.Module):
 
 class TrainModel(object):
     def __init__(self):
-        trainloader, validate_loader = data_loader.get_train_valid_loader('/home/yanan/train_data', batch_size=128, augment=True, valid_size=0.1, shuffle=True, random_seed=2312390, show_sample=False, num_workers=1, pin_memory=True)
-        #testloader = data_loader.get_test_loader('/home/yanan/train_data', batch_size=128, shuffle=False, num_workers=1, pin_memory=True)
+        trainloader, validate_loader = data_loader.get_train_valid_loader('/home/user/Documents/ea-cnn/DS_10283_3192/CINIC-10', batch_size=64, augment=True, valid_size=0.1, shuffle=True, random_seed=2312390, show_sample=False, num_workers=1, pin_memory=True)
+        #testloader = data_loader.get_test_loader('/home/user/Documents/ea-cnn/DS_10283_3192/CINIC-10', batch_size=64, shuffle=False, num_workers=1, pin_memory=True)
         net = EvoCNNModel()
         cudnn.benchmark = True
         net = net.cuda()
@@ -151,6 +150,7 @@ class TrainModel(object):
         if epoch > 0: lr = 0.1;
         if epoch > 148: lr = 0.01
         if epoch > 248: lr = 0.001
+      
         optimizer = optim.SGD(self.net.parameters(), lr=lr, momentum = 0.9, weight_decay=5e-4)
         running_loss = 0.0
         total = 0
@@ -163,11 +163,11 @@ class TrainModel(object):
             loss = self.criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            running_loss += loss.data[0]*labels.size(0)
+            running_loss += loss.item()*labels.size(0)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels.data).sum()
-        self.log_record('Train-Epoch:%3d,  Loss: %.3f, Acc:%.3f'% (epoch+1, running_loss/total, (correct/total)))
+        self.log_record('Train-Epoch:%3d,  Loss: %.3f, Acc:%.3f'% (epoch+1, torch.true_divide(running_loss, total), torch.true_divide(correct, total)))
 
     def test(self, epoch):
         self.net.eval()
@@ -179,14 +179,14 @@ class TrainModel(object):
             inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
             outputs = self.net(inputs)
             loss = self.criterion(outputs, labels)
-            test_loss += loss.data[0]*labels.size(0)
+            test_loss += loss.item()*labels.size(0)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels.data).sum()
-        if correct/total > self.best_acc:
-            self.best_acc = correct/total
+        if torch.true_divide(correct, total) > self.best_acc:
+            self.best_acc = torch.true_divide(correct, total)
             #print('*'*100, self.best_acc)
-        self.log_record('Validate-Loss:%.3f, Acc:%.3f'%(test_loss/total, correct/total))
+        self.log_record('Validate-Loss:%.3f, Acc:%.3f'%(torch.true_divide(test_loss, total), torch.true_divide(correct, total)))
 
 
     def process(self):

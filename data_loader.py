@@ -11,7 +11,7 @@ from torchvision import datasets
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 import torch.utils.data as tdata
-
+import torchvision
 
 def get_train_valid_loader(data_dir,
                            batch_size,
@@ -48,12 +48,18 @@ def get_train_valid_loader(data_dir,
     """
     error_msg = "[!] valid_size should be in the range [0, 1]."
     assert ((valid_size >= 0) and (valid_size <= 1)), error_msg
+#cifar10
 
+    # normalize = transforms.Normalize(
+    #     mean=[0.4914, 0.4822, 0.4465],
+    #     std=[0.2023, 0.1994, 0.2010],
+    # )
+
+    #cinic10
     normalize = transforms.Normalize(
-        mean=[0.4914, 0.4822, 0.4465],
-        std=[0.2023, 0.1994, 0.2010],
+        mean=[0.47889522, 0.47227842, 0.43047404],
+        std=[0.24205776, 0.23828046, 0.25874835],
     )
-
     # define transforms
     valid_transform = transforms.Compose([
             transforms.ToTensor(),
@@ -72,15 +78,26 @@ def get_train_valid_loader(data_dir,
             normalize,
         ])
 
-    # load the dataset
-    train_dataset = datasets.CIFAR10(
-        root=data_dir, train=True,
-        download=True, transform=train_transform,
+    # load the dataset 
+    #cifar10
+    
+    # train_dataset = datasets.CIFAR10(
+    #     root=data_dir, train=True,
+    #     download=True, transform=train_transform,
+    # )
+
+    # valid_dataset = datasets.CIFAR10(
+    #     root=data_dir, train=True,
+    #     download=True, transform=valid_transform,
+    # )
+
+  #cinic10
+    train_dataset = torchvision.datasets.ImageFolder(
+        root=data_dir + '/train', transform=train_transform,
     )
 
-    valid_dataset = datasets.CIFAR10(
-        root=data_dir, train=True,
-        download=True, transform=valid_transform,
+    valid_dataset = torchvision.datasets.ImageFolder(
+        root=data_dir + '/valid', transform=valid_transform,
     )
 
     num_train = len(train_dataset)
@@ -140,8 +157,8 @@ def get_test_loader(data_dir,
     - data_loader: test set iterator.
     """
     normalize = transforms.Normalize(
-        mean=[0.4914, 0.4822, 0.4465],
-        std=[0.2023, 0.1994, 0.2010],
+        mean=[0.47889522, 0.47227842, 0.43047404],
+        std=[0.24205776, 0.23828046, 0.25874835],
     )
 
     # define transform
@@ -150,14 +167,24 @@ def get_test_loader(data_dir,
         normalize,
     ])
 
-    dataset = datasets.CIFAR10(
-        root=data_dir, train=False,
-        download=True, transform=transform,
+    # dataset = datasets.CIFAR10(
+    #     root=data_dir, train=False,
+    #     download=True, transform=transform,
+    # )
+
+    # data_loader = tdata.DataLoader(
+    #     dataset, batch_size=batch_size, shuffle=shuffle,
+    #     num_workers=num_workers, pin_memory=pin_memory,
+    # )
+
+    dataset = torchvision.datasets.ImageFolder(
+        root=data_dir + '/test', transform=transform,
     )
 
     data_loader = tdata.DataLoader(
         dataset, batch_size=batch_size, shuffle=shuffle,
         num_workers=num_workers, pin_memory=pin_memory,
     )
-
+  
     return data_loader
+trainloader, validate_loader = get_train_valid_loader('/home/user/Documents/ea-cnn/DS_10283_3192/CINIC-10', batch_size=128, augment=True, valid_size=0.1, shuffle=True, random_seed=2312390, show_sample=False, num_workers=1, pin_memory=True)
