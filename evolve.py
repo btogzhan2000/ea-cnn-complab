@@ -114,4 +114,3 @@ if __name__ == '__main__':
     evoCNN.do_work(max_gen=20)
 
 
-

@@ -2,7 +2,7 @@ import configparser
 import os
 import numpy as np
 from subprocess import Popen, PIPE
-from genetic.population import Population, Individual, DenseUnit, ResUnit, PoolUnit
+from genetic.population import Population, Individual, DenseUnit, ResUnit, PoolUnit, InceptionBlock
 import logging
 import sys
 import multiprocessing
@@ -61,6 +61,13 @@ class StatusUpdateTool(object):
         for i in rs.split(','):
             resnet_limit.append(int(i))
         return resnet_limit[0], resnet_limit[1]
+    @classmethod
+    def get_inception_limit(cls):
+        rs = cls.__read_ini_file('network', 'inception_limit')
+        inception_limit = []
+        for i in rs.split(','):
+            inception_limit.append(int(i))
+        return inception_limit[0], inception_limit[1]
     @classmethod
     def get_pool_limit(cls):
         rs = cls.__read_ini_file('network', 'pool_limit')
@@ -168,6 +175,7 @@ class StatusUpdateTool(object):
         params['min_resnet'], params['max_resnet'] = cls.get_resnet_limit()
         params['min_pool'], params['max_pool'] = cls.get_pool_limit()
         params['min_densenet'], params['max_densenet'] = cls.get_densenet_limit()
+        params['min_inception'], params['max_inception'] = cls.get_inception_limit()
 
         params['min_resnet_unit'], params['max_resnet_unit'] = cls.get_resnet_unit_length_limit()
 
@@ -234,7 +242,8 @@ class GPUTools(object):
                 break
             else:
                 line = lines[line_no][1:-1].strip()
-                if "1338" in line or "1373" in line or "6230" in line or "6365" in line or "8232" in line or "31588" in line or "32456" in line:
+                # if "1338" in line or "1373" in line or "6230" in line or "6365" in line or "8232" in line or "31588" in line or "32456" in line:
+                if "1082" in line or "1320" in line or "8325" in line or "8600" in line:    
                     print("pass") 
                 else:
                     gpu_info_list.append(line)
@@ -443,6 +452,24 @@ class Utils(object):
                                 raise ValueError('Unknown key for load pool unit, key_name:%s'%( _key))
                         pool = PoolUnit(pool_params['number'], pool_params['max_or_avg'])
                         indi.units.append(pool)
+                    elif line.startswith('[inception'):
+                        inception_params = {}
+                        data_maps = line[11:-1].split(',', 3)
+                        for data_item in data_maps:
+                            _key, _value = data_item.split(":")
+                            if _key == 'number':
+                                indi.number_id = int(_value)
+                                inception_params['number'] = int(_value)
+                            elif _key == 'in':
+                                inception_params['in_channel'] = int(_value)
+                            elif _key == 'out':
+                                inception_params['out_channel'] = int(_value)
+                            else:
+                                raise ValueError('Unknown key for load conv unit, key_name:%s'%( _key))
+                        inception = InceptionBlock(number=inception_params['number'],\
+                                         in_channel=inception_params['in_channel'],  out_1x1=64, red_3x3=96, out_3x3=128, red_5x5=16, out_5x5=32,\
+                                         out_1x1pool=32)
+                        indi.units.append(inception)
                     else:
                         print('Unknown key for load unit type, line content:%s'%(line))
             pop.individuals.append(indi)
@@ -488,6 +515,7 @@ class Utils(object):
         #print('\n'.join(part2))
 
         line = f.readline().rstrip() #skip the comment '#generate_forward'
+       
         while line.strip() != '"""':
             part3.append(line)
             line = f.readline().rstrip()
@@ -503,9 +531,15 @@ class Utils(object):
             if u.type ==1:
                 layer = 'self.op%d = ResNetUnit(amount=%d, in_channel=%d, out_channel=%d)'%(index, u.amount, u.in_channel, u.out_channel)
                 unit_list.append(layer)
+            
             elif u.type ==3:
                 layer = 'self.op%d = DenseNetUnit(k=%d, amount=%d, in_channel=%d, out_channel=%d, max_input_channel=%d)'%(index, u.k, u.amount, u.in_channel, u.out_channel, u.max_input_channel)
                 unit_list.append(layer)
+              
+            elif u.type == 4:
+                layer = 'self.op%d = Inception_block(in_channels=%d, out_1x1=%d, red_3x3=%d, out_3x3=%d, red_5x5=%d, out_5x5=%d, out_1x1pool=%d)'%(index, u.in_channel, u.out_1x1, u.red_3x3, u.out_3x3, u.red_5x5, u.out_5x5, u.out_1x1pool)
+                unit_list.append(layer)
+       
         #print('\n'.join(unit_list))
 
         #query fully-connect layer
@@ -514,8 +548,12 @@ class Utils(object):
         for u in indi.units:
             if u.type == 1:
                 out_channel_list.append(u.out_channel)
+                
             elif u.type == 3:
                 out_channel_list.append(u.out_channel)
+
+            elif u.type == 4:
+                 out_channel_list.append(u.out_1x1+u.out_3x3+u.out_5x5+u.out_1x1pool)
             else:
                 out_channel_list.append(out_channel_list[-1])
                 image_output_size = int(image_output_size/2)
@@ -535,6 +573,9 @@ class Utils(object):
             elif u.type == 3:
                 _str = 'out_%d = self.op%d(%s)'%(i, i, last_out_put)
                 forward_list.append(_str)
+            elif u.type == 4:
+                _str = 'out_%d = self.op%d(%s)'%(i, i, last_out_put)
+                forward_list.append(_str)
             else:
                 if u.max_or_avg < 0.5:
                     _str = 'out_%d = F.max_pool2d(out_%d, 2)'%(i, i-1)
@@ -545,6 +586,7 @@ class Utils(object):
         #print('\n'.join(forward_list))
 
         part1, part2, part3 = cls.read_template()
+        
         _str = []
         current_time = time.strftime("%Y-%m-%d  %H:%M:%S")
         _str.append('"""')

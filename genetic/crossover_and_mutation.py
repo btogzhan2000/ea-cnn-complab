@@ -180,14 +180,19 @@ class Crossover(object):
                         if unit_list1[i].type == 1 or unit_list1[i].type == 3:
                             last_output_from_list1 = unit_list1[i].out_channel
                             break
+                        elif unit_list1[i].type == 4:
+                            inception_out = unit_list1[i].out_1x1 + unit_list1[i].out_3x3 + unit_list1[i].out_5x5 +unit_list1[i].out_1x1pool
+                            print("last_output_from_list1", inception_out)
+                            last_output_from_list1 = inception_out
+                            break
 
 
                 keep_out_channel = last_output_from_list1
                 for j in range(pos1, len(unit_list1)):
-                    if unit_list1[j].type == 1 or unit_list1[j].type == 3:
+                    if unit_list1[j].type == 1 or unit_list1[j].type == 3 or unit_list1[j].type == 4:
                         self.log.info('Change the input channel of unit at %d to %d that is the output channel of unit at %d in %s'%(j, keep_out_channel, i, parent1.id))
                         unit_list1[j].in_channel = keep_out_channel
-                        if unit_list1[j].type == 1:
+                        if unit_list1[j].type == 1 or unit_list1[j].type == 4:
                             break
                         elif unit_list1[j].type ==  3:
                             estimated_out_channel = unit_list1[j].k*unit_list1[j].amount + unit_list1[j].in_channel
@@ -209,13 +214,19 @@ class Crossover(object):
                         if unit_list2[i].type == 1 or unit_list2[i].type == 3:
                             last_output_from_list2 = unit_list2[i].out_channel
                             break
+                        elif unit_list2[i].type == 4:
+                            inception_out = unit_list2[i].out_1x1 + unit_list2[i].out_3x3 + unit_list2[i].out_5x5 +unit_list2[i].out_1x1pool
+                            last_output_from_list2 = inception_out
+                            print("last_output_from_list2", inception_out)
+                            break
+                        
 
                 keep_out_channel = last_output_from_list2
                 for j in range(pos2, len(unit_list2)):
-                    if unit_list2[j].type == 1 or unit_list2[j].type == 3:
+                    if unit_list2[j].type == 1 or unit_list2[j].type == 3 or unit_list2[j].type == 4:
                         self.log.info('Change the input channel of unit at %d to %d that is the output channel of unit at %d in %s'%(j, keep_out_channel, i, parent2.id))
                         unit_list2[j].in_channel = keep_out_channel
-                        if unit_list2[j].type == 1:
+                        if unit_list2[j].type == 1 or unit_list2[j].type == 4:
                             break
                         elif unit_list2[j].type == 3:
                             estimated_out_channel = unit_list2[j].k*unit_list2[j].amount + unit_list2[j].in_channel
@@ -293,13 +304,15 @@ class Mutation(object):
         self.log.info('Mutation position occurs at %d'%(mutation_position))
         # determine the unit type for adding
         u_ = random.random()
-        if u_ < 0.333:
+        if u_ < 0.25:
             type_ = 1
-        elif u_ < 0.666:
+        elif u_ < 0.5:
             type_ = 2
-        else:
+        elif u_ < 0.75:
             type_ = 3
-        type_string_list = ['RESNET', 'POOLING', 'DENSENET']
+        else:
+            type_ = 4
+        type_string_list = ['RESNET', 'POOLING', 'DENSENET', 'INCEPTION']
         self.log.info('A %s unit would be added due to the probability of %.2f'%(type_string_list[type_-1], u_))
         if type_ == 2:
             num_exist_pool_units = 0
@@ -308,8 +321,15 @@ class Mutation(object):
                     num_exist_pool_units +=1
             if num_exist_pool_units > StatusUpdateTool.get_pool_limit()[1]-1:
                 u_ = random.random()
-                type_ = 1 if u_ < 0.5 else 3
-                self.log.info('The added unit is changed to %s because the existing number of POOLING exceeds %d, limit size:%d'%('RESNET' if type_ == 1 else 'DENSENET', num_exist_pool_units, StatusUpdateTool.get_pool_limit()[1]))
+                if u_ < 0.33:
+                  type_ = 1
+                elif u_ < 0.66:
+                  type_ = 3
+                else:
+                  type_ = 4
+
+                # type_ = 1 if u_ < 0.5 else 3
+                self.log.info('The added unit is changed to %s because the existing number of POOLING exceeds %d, limit size:%d'%('RESNET' if type_ == 1 else 'DENSENET' if type_ == 3 else 'INCEPTION', num_exist_pool_units, StatusUpdateTool.get_pool_limit()[1]))
 
         #do the details
         if type_ == 2:
@@ -319,17 +339,27 @@ class Mutation(object):
                 if indi.units[i].type == 1 or indi.units[i].type == 3:
                     _in_channel = indi.units[i].out_channel
                     break
+                elif indi.units[i].type == 4:
+                    inception_out = indi.units[i].out_1x1 + indi.units[i].out_3x3 + indi.units[i].out_5x5 +indi.units[i].out_1x1pool
+                    _in_channel = inception_out
+                    break
             if type_ == 1:
                 add_unit = indi.init_a_resnet(mutation_position+1, _amount=None, _in_channel=_in_channel, _out_channel=None)
+                keep_out_channel = add_unit.out_channel
             if type_ == 3:
                 add_unit = indi.init_a_densenet(mutation_position+1, _amount=None, _k=None, _max_input_channel=None, _in_channel=_in_channel)
+                keep_out_channel = add_unit.out_channel
+            if type_ == 4:
+                add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, out_1x1=64, red_3x3=96, out_3x3=128, red_5x5=16, out_5x5=32, out_1x1pool=32)
+                inception_out = add_unit.out_1x1 + add_unit.out_3x3 + add_unit.out_5x5 +add_unit.out_1x1pool
+                keep_out_channel = inception_out
 
-            keep_out_channel = add_unit.out_channel
+            # keep_out_channel = add_unit.out_channel
             for i in range(mutation_position+1, len(indi.units)):
-                if indi.units[i].type == 1 or indi.units[i].type == 3 :
+                if indi.units[i].type == 1 or indi.units[i].type == 3 or indi.units[i].type == 4:
                     self.log.info('Due to the above mutation, unit at %d changes its input channel from %d to %d'%(i, indi.units[i].in_channel, keep_out_channel))
                     indi.units[i].in_channel = keep_out_channel
-                    if indi.units[i].type == 1:
+                    if indi.units[i].type == 1 or indi.units[i].type == 4:
                         break
                     elif indi.units[i].type == 3:
                         estimated_out_channel = indi.units[i].k*indi.units[i].amount + indi.units[i].in_channel
@@ -359,13 +389,13 @@ class Mutation(object):
         if len(indi.units) > 1:
             mutation_position = int(np.floor(np.random.random()*(len(indi.units)-1))) + 1 # the first unit would not be removed
             self.log.info('Mutation position occurs at %d'%(mutation_position))
-            if indi.units[mutation_position].type == 1 or indi.units[mutation_position].type == 3:
+            if indi.units[mutation_position].type == 1 or indi.units[mutation_position].type == 3 or indi.units[mutation_position].type == 4:
                 keep_out_channel = indi.units[mutation_position].in_channel
                 for i in range(mutation_position+1, len(indi.units)):
-                    if indi.units[i].type == 1 or indi.units[i].type == 3:
+                    if indi.units[i].type == 1 or indi.units[i].type == 3 or indi.units[i].type == 4:
                         self.log.info('Due to the above mutation, unit at %d changes its input channel from %d to %d'%(i, indi.units[i].in_channel, keep_out_channel))
                         indi.units[i].in_channel = keep_out_channel
-                        if indi.units[i].type == 1:
+                        if indi.units[i].type == 1 or indi.units[i].type == 4:
                             break
                         elif indi.units[i].type == 3:
                             estimated_out_channel = indi.units[i].k*indi.units[i].amount + indi.units[i].in_channel
@@ -402,13 +432,19 @@ class Mutation(object):
         self.log.info('Do the ALTER mutation for indi:%s'%(indi.id))
         mutation_position = int(np.floor(np.random.random()*len(indi.units)))
         mutation_unit = indi.units[mutation_position]
+        while(mutation_unit.type == 4):
+            mutation_position = int(np.floor(np.random.random()*len(indi.units)))
+            mutation_unit = indi.units[mutation_position]
         mutation_unit_name = ''
         if mutation_unit.type == 1:
             mutation_unit_name = 'RESNET'
         elif mutation_unit.type == 2:
             mutation_unit_name = 'POOLING'
-        else:
+        elif mutation_unit.type == 3:
             mutation_unit_name = 'DENSENET'
+        else:
+            mutation_unit_name = 'INCEPTION NOT IMPLEMENTED'
+
         self.log.info('Do the %s mutation for indi:%s at position %d'%(mutation_unit_name, indi.id, mutation_position))
 
         mutation_p_type = ''
@@ -417,8 +453,9 @@ class Mutation(object):
             mutation_p_type, mutation_p_count = self.do_alter_resnet_mutation(mutation_position, indi)
         elif mutation_unit.type == 2:
             mutation_p_type, mutation_p_count = self.do_alter_pooling_mutation(mutation_position, indi)
-        else:
+        elif mutation_unit.type == 3:
             mutation_p_type, mutation_p_count = self.do_alter_densenet_mutation(mutation_position, indi)
+        
 
         return mutation_p_type, mutation_p_count
 
@@ -441,10 +478,10 @@ class Mutation(object):
 
                 keep_out_channel = channel_list[index_]
                 for i in range(position+1,len(indi.units)):
-                    if indi.units[i].type == 1 or indi.units[i].type == 3:
+                    if indi.units[i].type == 1 or indi.units[i].type == 3 or indi.units[i].type == 4:
                         self.log.info('Due to above, the unit at %d should change its input channel from %d to %d'%(i, indi.units[i].in_channel, keep_out_channel))
                         indi.units[i].in_channel = keep_out_channel
-                        if indi.units[i].type == 1:
+                        if indi.units[i].type == 1 or indi.units[i].type == 4:
                             break;
                         elif indi.units[i].type == 3:
                             estimated_out_channel = indi.units[i].k*indi.units[i].amount + indi.units[i].in_channel
@@ -493,10 +530,10 @@ class Mutation(object):
 
             keep_out_channel = new_out_channel
             for i in range(position+1, len(indi.units)):
-                if indi.units[i].type == 1 or indi.units[i].type == 3 :
+                if indi.units[i].type == 1 or indi.units[i].type == 3 or indi.units[i].type == 4:
                     self.log.info('Due to the above mutation, unit at %d changes its input channel from %d to %d'%(i, indi.units[i].in_channel, keep_out_channel))
                     indi.units[i].in_channel = keep_out_channel
-                    if indi.units[i].type == 1:
+                    if indi.units[i].type == 1 or indi.units[i].type == 4:
                         break
                     elif indi.units[i].type == 3:
                         estimated_out_channel = indi.units[i].k*indi.units[i].amount + indi.units[i].in_channel
@@ -545,6 +582,8 @@ class Mutation(object):
         return selected_index[0]
 
 
-if __name__ == '__main__':
-    m = Mutation(None, None, None)
-    m.do_mutation()
+# if __name__ == '__main__':
+#     # m = Mutation(None, None, None)
+#     # m.do_mutation()
+#     m = Crossover(None, None, None)
+#     m.do_crossover()
