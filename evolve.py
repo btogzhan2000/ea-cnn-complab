@@ -5,6 +5,7 @@ from genetic.crossover_and_mutation import CrossoverAndMutation
 from genetic.selection_operator import Selection
 import numpy as np
 import copy
+import random
 
 class EvolveCNN(object):
     def __init__(self, params):
@@ -53,7 +54,16 @@ class EvolveCNN(object):
         # find the largest one's index
         max_index = np.argmax(v_list)
         selection = Selection()
-        selected_index_list = selection.RouletteSelection(v_list, k=self.params['pop_size'])
+
+        u_ = random.random()
+        selected_index_list = []
+        if u_ < 0.5:
+            # print("roulette")
+            selected_index_list = selection.RouletteSelection(v_list, k=self.params['pop_size'])
+        else:
+            # print("wheel")
+            selected_index_list = selection.WheelSelection(v_list, k=self.params['pop_size'])
+
         if max_index not in selected_index_list:
             first_selectd_v_list = [v_list[i] for i in selected_index_list]
             min_idx = np.argmin(first_selectd_v_list)
@@ -112,5 +122,6 @@ if __name__ == '__main__':
     params = StatusUpdateTool.get_init_params()
     evoCNN = EvolveCNN(params)
     evoCNN.do_work(max_gen=20)
+
 
 

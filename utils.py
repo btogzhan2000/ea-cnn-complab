@@ -7,6 +7,7 @@ import logging
 import sys
 import multiprocessing
 import time
+import random
 
 class StatusUpdateTool(object):
     @classmethod
@@ -243,7 +244,7 @@ class GPUTools(object):
             else:
                 line = lines[line_no][1:-1].strip()
                 # if "1338" in line or "1373" in line or "6230" in line or "6365" in line or "8232" in line or "31588" in line or "32456" in line:
-                if "1082" in line or "1320" in line or "8325" in line or "8600" in line:    
+                if "1064" in line or "1328" in line or "1502" in line:    
                     print("pass") 
                 else:
                     gpu_info_list.append(line)
@@ -464,11 +465,50 @@ class Utils(object):
                                 inception_params['in_channel'] = int(_value)
                             elif _key == 'out':
                                 inception_params['out_channel'] = int(_value)
+                            elif _key == 'type':
+                                inception_params['inception_type'] = str(_value)
                             else:
                                 raise ValueError('Unknown key for load conv unit, key_name:%s'%( _key))
-                        inception = InceptionBlock(number=inception_params['number'],\
-                                         in_channel=inception_params['in_channel'],  out_1x1=64, red_3x3=96, out_3x3=128, red_5x5=16, out_5x5=32,\
-                                         out_1x1pool=32)
+
+
+                        if inception_params['inception_type'] == "3a":
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=64, red_3x3=96, out_3x3=128, red_5x5=16, out_5x5=32,\
+                                            out_1x1pool=32)
+                        elif inception_params['inception_type'] == "3b":
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=128, red_3x3=128, out_3x3=192, red_5x5=32, out_5x5=96,\
+                                            out_1x1pool=64)
+                        elif inception_params['inception_type'] == "4a":
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=192, red_3x3=96, out_3x3=208, red_5x5=16, out_5x5=48,\
+                                            out_1x1pool=64)
+                        elif inception_params['inception_type'] == "4b":
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=160, red_3x3=112, out_3x3=224, red_5x5=24, out_5x5=64,\
+                                            out_1x1pool=64)
+                        elif inception_params['inception_type'] == "4c":
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=128, red_3x3=128, out_3x3=256, red_5x5=24, out_5x5=64,\
+                                            out_1x1pool=64)
+                        elif inception_params['inception_type'] == "4d":
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=112, red_3x3=144, out_3x3=288, red_5x5=32, out_5x5=64,\
+                                            out_1x1pool=64)
+                        elif inception_params['inception_type'] == "4e":
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=256, red_3x3=160, out_3x3=320, red_5x5=32, out_5x5=128,\
+                                            out_1x1pool=128)
+                        elif inception_params['inception_type'] == "5a":
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=256, red_3x3=160, out_3x3=320, red_5x5=32, out_5x5=128,\
+                                            out_1x1pool=128)
+                        else:
+                            inception = InceptionBlock(number=inception_params['number'],\
+                                            in_channel=inception_params['in_channel'],  inception_type=inception_params['inception_type'], out_1x1=384, red_3x3=192, out_3x3=384, red_5x5=48, out_5x5=128,\
+                                            out_1x1pool=128)
+                        print("inception params", inception_params['inception_type'])
+
                         indi.units.append(inception)
                     else:
                         print('Unknown key for load unit type, line content:%s'%(line))

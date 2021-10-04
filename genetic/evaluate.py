@@ -112,8 +112,3 @@ class FitnessEvaluate(object):
             self.log.info('None offspring has been evaluated')
 
         Utils.save_fitness_to_cache(self.individuals)
-
-
-
-
-

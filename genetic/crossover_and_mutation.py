@@ -61,16 +61,31 @@ class Crossover(object):
         self.pool_limit = StatusUpdateTool.get_pool_limit()[1]
 
     def _choose_one_parent(self):
-        count_ = len(self.individuals)
-        idx1 = int(np.floor(np.random.random()*count_))
-        idx2 = int(np.floor(np.random.random()*count_))
-        while idx2 == idx1:
+        u_ = random.random()
+        if u_ < 0.5:
+            # print("bin tour")
+            count_ = len(self.individuals)
+            idx1 = int(np.floor(np.random.random()*count_))
             idx2 = int(np.floor(np.random.random()*count_))
-
-        if self.individuals[idx1].acc > self.individuals[idx1].acc:
-            return idx1
+            while idx2 == idx1:
+                idx2 = int(np.floor(np.random.random()*count_))
+    
+            if self.individuals[idx1].acc > self.individuals[idx1].acc:
+                return idx1
+            else:
+                return idx2
         else:
-            return idx2
+            # print("wheel")
+            v_list = []
+            for indi in self.individuals:
+                v_list.append(indi.acc)
+            fitness_values = np.asarray(v_list)
+            total_fitness = np.sum(fitness_values).astype(float)
+            indi_probs = [fitness/total_fitness for fitness in fitness_values]
+            idx_list = np.arange(len(fitness_values))
+            idx = np.random.choice(idx_list, p=indi_probs)
+            return idx
+        # return 0
     """
     binary tournament selection
     """
@@ -219,7 +234,7 @@ class Crossover(object):
                             last_output_from_list2 = inception_out
                             print("last_output_from_list2", inception_out)
                             break
-                        
+
 
                 keep_out_channel = last_output_from_list2
                 for j in range(pos2, len(unit_list2)):
@@ -350,7 +365,29 @@ class Mutation(object):
                 add_unit = indi.init_a_densenet(mutation_position+1, _amount=None, _k=None, _max_input_channel=None, _in_channel=_in_channel)
                 keep_out_channel = add_unit.out_channel
             if type_ == 4:
-                add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, out_1x1=64, red_3x3=96, out_3x3=128, red_5x5=16, out_5x5=32, out_1x1pool=32)
+                inception_types = ["3a", "3b", "4a", "4b", "4c", "4d", "4e", "5a", "5b"]
+                chosen_type = random.choice(inception_types)
+
+                if chosen_type == "3a":
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=64, red_3x3=96, out_3x3=128, red_5x5=16, out_5x5=32, out_1x1pool=32)
+                elif chosen_type == "3b":
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=128, red_3x3=128, out_3x3=192, red_5x5=32, out_5x5=96, out_1x1pool=64)
+                elif chosen_type == "4a":
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=192, red_3x3=96, out_3x3=208, red_5x5=16, out_5x5=48, out_1x1pool=64)
+                elif chosen_type == "4b":
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=160, red_3x3=112, out_3x3=224, red_5x5=24, out_5x5=64, out_1x1pool=64)
+                elif chosen_type == "4c":
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=128, red_3x3=128, out_3x3=256, red_5x5=24, out_5x5=64, out_1x1pool=64)
+                elif chosen_type == "4d":
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=112, red_3x3=144, out_3x3=288, red_5x5=32, out_5x5=64, out_1x1pool=64)
+                elif chosen_type == "4e":
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=256, red_3x3=160, out_3x3=320, red_5x5=32, out_5x5=128, out_1x1pool=128)
+                elif chosen_type == "5a":
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=256, red_3x3=160, out_3x3=320, red_5x5=32, out_5x5=128, out_1x1pool=128)
+                else:
+                  add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, inception_type=chosen_type, out_1x1=384, red_3x3=192, out_3x3=384, red_5x5=48, out_5x5=128, out_1x1pool=128)
+
+                # add_unit = indi.init_an_inception(mutation_position+1, in_channels=_in_channel, out_1x1=64, red_3x3=96, out_3x3=128, red_5x5=16, out_5x5=32, out_1x1pool=32)
                 inception_out = add_unit.out_1x1 + add_unit.out_3x3 + add_unit.out_5x5 +add_unit.out_1x1pool
                 keep_out_channel = inception_out
 
@@ -455,7 +492,7 @@ class Mutation(object):
             mutation_p_type, mutation_p_count = self.do_alter_pooling_mutation(mutation_position, indi)
         elif mutation_unit.type == 3:
             mutation_p_type, mutation_p_count = self.do_alter_densenet_mutation(mutation_position, indi)
-        
+
 
         return mutation_p_type, mutation_p_count
 
